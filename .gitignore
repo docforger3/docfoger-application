@@ -1,0 +1,30 @@
+# Dependencies
+**/node_modules
+**/dist
+**/target
+**/.angular
+**/.mvn
+**/mvnw
+**/mvnw.cmd
+
+# IDEs and Editors
+**/.vscode
+**/.idea
+**/.classpath
+**/.project
+**/.settings
+**/.nb-gradle
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Environment Secrets
+**/.env
+**/environment.prod.ts
+**/environment.ts
+
+# Large Build Artifacts
+*.jar
+*.war
+*.exe
