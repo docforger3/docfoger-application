@@ -27,5 +27,5 @@ jobs:
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_DOCFORGER }}'
-          projectId: docfoger-placeholder-id
+          projectId: docforge-23b3d
           entrypoint: frontend
