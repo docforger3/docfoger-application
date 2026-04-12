@@ -25,8 +25,9 @@ import { ConversionService, ConversionStats, ConversionHistory } from '../../ser
             With One Click
           </h1>
           <p class="hero-subtitle">
-            Convert between PDF, Word, Excel, Images, and Text effortlessly.
-            Fast, secure, and powered by enterprise-grade conversion engines.
+            DocForge is your ultimate all-in-one productivity workspace. Effortlessly build professional resumes, 
+            design stunning invitations, generate secure QR codes, and convert any file format—all in one place. 
+            Designed for efficiency and 100% secure.
           </p>
           <div class="hero-actions">
             <a routerLink="/converter" class="btn-primary" id="hero-cta">
@@ -49,7 +50,7 @@ import { ConversionService, ConversionStats, ConversionHistory } from '../../ser
     <!-- AdSense Banner -->
     <div class="ad-break-large animate-fade-in-up">
       <div class="container">
-        <app-adsense-banner slotId="1234567890" margin="40px 0 20px 0"></app-adsense-banner>
+        <app-adsense-banner slotId="1234567890" margin="10px 0 10px 0"></app-adsense-banner>
       </div>
     </div>
     
@@ -364,7 +365,7 @@ import { ConversionService, ConversionStats, ConversionHistory } from '../../ser
   styles: [`
     /* ===== Hero Section ===== */
     .hero {
-      padding: 60px 0 40px;
+      padding: 60px 0 20px;
       text-align: center;
     }
 
@@ -415,7 +416,7 @@ import { ConversionService, ConversionStats, ConversionHistory } from '../../ser
 
     /* ===== Tools Section ===== */
     .tools-section {
-      padding: 60px 0;
+      padding: 20px 0 60px;
     }
 
     .section-header {

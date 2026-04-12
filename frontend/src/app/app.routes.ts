@@ -62,6 +62,30 @@ export const routes: Routes = [
     title: 'DocForge — EMI Calculator'
   },
   {
+    path: 'privacy',
+    loadComponent: () =>
+      import('./pages/info/privacy/privacy.component').then(m => m.PrivacyComponent),
+    title: 'DocForge — Privacy Policy'
+  },
+  {
+    path: 'terms',
+    loadComponent: () =>
+      import('./pages/info/terms/terms.component').then(m => m.TermsComponent),
+    title: 'DocForge — Terms of Use'
+  },
+  {
+    path: 'about',
+    loadComponent: () =>
+      import('./pages/info/about/about.component').then(m => m.AboutComponent),
+    title: 'DocForge — About Us'
+  },
+  {
+    path: 'contact',
+    loadComponent: () =>
+      import('./pages/info/contact/contact.component').then(m => m.ContactComponent),
+    title: 'DocForge — Contact Us'
+  },
+  {
     path: '**',
     redirectTo: ''
   }

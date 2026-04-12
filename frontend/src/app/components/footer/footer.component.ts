@@ -30,28 +30,28 @@ import { RouterLink } from '@angular/router';
             <div class="footer-column">
               <h4>Tools</h4>
               <ul>
-                <li><a routerLink="/converter">Document Converter</a></li>
-                <li><a routerLink="/invoice-generator">Invoice Generator</a></li>
-                <li><a routerLink="/resume-builder">Resume Builder</a></li>
-                <li><a routerLink="/invitation-builder">Invitation Builder</a></li>
+                <li><a href="javascript:void(0)" routerLink="/converter">Document Converter</a></li>
+                <li><a href="javascript:void(0)" routerLink="/invoice-generator">Invoice Generator</a></li>
+                <li><a href="javascript:void(0)" routerLink="/resume-builder">Resume Builder</a></li>
+                <li><a href="javascript:void(0)" routerLink="/invitation-builder">Invitation Builder</a></li>
               </ul>
             </div>
             <div class="footer-column">
               <h4>Utilities</h4>
               <ul>
-                <li><a routerLink="/emi-calculator">EMI Calculator</a></li>
-                <li><a routerLink="/qr-code">QR Code Generator</a></li>
-                <li><a routerLink="/text-tools">Text Tools</a></li>
-                <li><a routerLink="/image-editor">Image Editor</a></li>
+                <li><a href="javascript:void(0)" routerLink="/emi-calculator">EMI Calculator</a></li>
+                <li><a href="javascript:void(0)" routerLink="/qr-code">QR Code Generator</a></li>
+                <li><a href="javascript:void(0)" routerLink="/text-tools">Text Tools</a></li>
+                <li><a href="javascript:void(0)" routerLink="/image-editor">Image Editor</a></li>
               </ul>
             </div>
             <div class="footer-column">
               <h4>Platform</h4>
               <ul>
-                <li>Privacy Policy</li>
-                <li>Terms of Use</li>
-                <li>Contact Us</li>
-                <li>About</li>
+                <li><a href="javascript:void(0)" routerLink="/privacy">Privacy Policy</a></li>
+                <li><a href="javascript:void(0)" routerLink="/terms">Terms of Use</a></li>
+                <li><a href="javascript:void(0)" routerLink="/contact">Contact Us</a></li>
+                <li><a href="javascript:void(0)" routerLink="/about">About</a></li>
               </ul>
             </div>
           </div>
@@ -67,7 +67,7 @@ import { RouterLink } from '@angular/router';
   styles: [`
     .footer {
       position: relative;
-      z-index: 1;
+      z-index: 9999;
       margin-top: 80px;
       border-top: 1px solid var(--glass-border);
       background: rgba(10, 14, 26, 0.8);
@@ -173,10 +173,8 @@ import { RouterLink } from '@angular/router';
     }
 
     .footer-column li {
-      padding: 5px 0;
       color: var(--text-muted);
       font-size: 0.87rem;
-      cursor: pointer;
       transition: color 0.2s;
     }
 
@@ -185,8 +183,14 @@ import { RouterLink } from '@angular/router';
     }
 
     .footer-column li a {
+      display: block;
+      padding: 6px 0;
       color: inherit;
       text-decoration: none;
+      cursor: pointer;
+      position: relative;
+      z-index: 10000;
+      pointer-events: auto !important;
     }
 
     .footer-column li a:hover {

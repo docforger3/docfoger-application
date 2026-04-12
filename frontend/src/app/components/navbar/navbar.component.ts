@@ -254,6 +254,7 @@ import { CommonModule } from '@angular/common';
       transition: opacity 0.3s;
     }
     .mobile-overlay.visible {
+      display: block;
       opacity: 1;
     }
 
