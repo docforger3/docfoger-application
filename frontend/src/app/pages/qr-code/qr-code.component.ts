@@ -2,14 +2,14 @@ import { Component, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { QRCodeComponent as QrCodeLibComponent } from 'angularx-qrcode';
+import { QRCodeComponent } from 'angularx-qrcode';
 
 type QrDataType = 'url' | 'text' | 'vcard';
 
 @Component({
   selector: 'app-qr-code',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, QrCodeLibComponent],
+  imports: [CommonModule, FormsModule, RouterLink, QRCodeComponent],
   template: `
     <div class="tools-page">
       <!-- Navbar / Header -->
