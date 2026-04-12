@@ -19,11 +19,6 @@
 .DS_Store
 Thumbs.db
 
-# Environment Secrets
-**/.env
-**/environment.prod.ts
-**/environment.ts
-
 # Large Build Artifacts
 *.jar
 *.war
