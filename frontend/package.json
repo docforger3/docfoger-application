@@ -21,10 +21,17 @@
     "@emailjs/browser": "^4.4.1",
     "angularx-qrcode": "^21.0.5",
     "diff": "^8.0.4",
+    "docx": "^9.6.1",
     "html2canvas": "^1.4.1",
+    "html2pdf.js": "^0.14.0",
     "jspdf": "^4.2.1",
+    "mammoth": "^1.12.0",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^5.6.205",
+    "pptxgenjs": "^4.0.1",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
+    "xlsx": "^0.18.5",
     "zone.js": "~0.14.10"
   },
   "devDependencies": {
