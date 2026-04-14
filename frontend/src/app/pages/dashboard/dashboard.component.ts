@@ -356,6 +356,37 @@ import { ConversionService, ConversionStats, ConversionHistory } from '../../ser
               </svg>
             </div>
           </a>
+
+          <!-- Bill Splitter Card -->
+          <a routerLink="/split-expense" class="tool-card bill-card animate-fade-in-up" id="tool-bill-splitter">
+            <div class="card-glow bill-glow"></div>
+            <div class="card-icon">
+              <svg viewBox="0 0 48 48" fill="none">
+                <defs>
+                  <linearGradient id="billGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#8b5cf6"/>
+                    <stop offset="100%" style="stop-color:#d946ef"/>
+                  </linearGradient>
+                </defs>
+                <rect x="8" y="10" width="32" height="28" rx="4" fill="url(#billGrad)" opacity="0.12"/>
+                <!-- Dollar sign simplified -->
+                <path d="M24 16v16M20 20h8a4 4 0 0 1 0 8h-8a4 4 0 0 0 0 8h8" stroke="url(#billGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="card-content">
+              <h3 class="card-title">Split Expense App</h3>
+              <p class="card-desc">Simplify group expenses and settlements with intelligent transaction minimization.</p>
+              <div class="card-features">
+                <span class="feature-tag purple">Minimized Settlement</span>
+                <span class="feature-tag purple">Percentage Split</span>
+              </div>
+            </div>
+            <div class="card-arrow bill-arrow">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+              </svg>
+            </div>
+          </a>
         </div>
       </div>
     </section>
@@ -888,6 +919,24 @@ import { ConversionService, ConversionStats, ConversionHistory } from '../../ser
       color: #059669;
     }
 
+    /* Bill Splitter Card */
+    .bill-card:hover {
+      border-color: rgba(139, 92, 246, 0.3);
+      box-shadow: 0 0 30px rgba(139, 92, 246, 0.15);
+    }
+    .bill-card:hover .bill-arrow {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    .bill-glow {
+      position: absolute; top: -50%; right: -30%; width: 300px; height: 300px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(139, 92, 246, 0.06), transparent 70%); pointer-events: none;
+    }
+    .bill-arrow {
+      width: 36px; height: 36px; flex-shrink: 0; color: #8b5cf6; opacity: 0; transform: translateX(-10px); transition: all 0.3s ease;
+    }
+    .bill-arrow svg { width: 100%; height: 100%; }
+
     /* ===== RESPONSIVE ===== */
     @media (max-width: 768px) {
       .hero { padding: 40px 0 28px; }
@@ -912,11 +961,12 @@ import { ConversionService, ConversionStats, ConversionHistory } from '../../ser
       .resume-card,
       .invoice-card,
       .invite-card,
+      .bill-card,
       .emi-card { flex-direction: column; align-items: flex-start; gap: 14px; }
 
       /* Always show arrows on mobile (no hover required) */
       .card-arrow, .editor-arrow, .qr-arrow, .text-arrow,
-      .uuid-arrow, .resume-arrow, .invoice-arrow, .invite-arrow, .emi-arrow {
+      .uuid-arrow, .resume-arrow, .invoice-arrow, .invite-arrow, .bill-arrow, .emi-arrow {
         opacity: 1;
         transform: translateX(0);
         margin-top: 4px;

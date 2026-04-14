@@ -62,6 +62,12 @@ export const routes: Routes = [
     title: 'DocForge — EMI Calculator'
   },
   {
+    path: 'split-expense',
+    loadComponent: () =>
+      import('./pages/split-expense/split-expense.component').then(m => m.SplitExpenseComponent),
+    title: 'DocForge — Split Expense Tool'
+  },
+  {
     path: 'privacy',
     loadComponent: () =>
       import('./pages/info/privacy/privacy.component').then(m => m.PrivacyComponent),
