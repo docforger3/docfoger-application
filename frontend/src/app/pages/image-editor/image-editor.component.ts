@@ -322,6 +322,98 @@ interface HistoryState {
         </div>
       </div>
     </div>
+
+    <!-- MOBILE BOTTOM TOOL BAR -->
+    <div class="mobile-tools-bar">
+      <!-- Tools -->
+      <button class="m-tool-btn" [class.active]="activeTool === 'select'" (click)="setTool('select')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 3 7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="m13 13 6 6"/></svg>
+        Select
+      </button>
+      <button class="m-tool-btn" [class.active]="activeTool === 'crop'" (click)="setTool('crop')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg>
+        Crop
+      </button>
+      <button class="m-tool-btn" [class.active]="activeTool === 'draw'" (click)="setTool('draw')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 19 7-7 3 3-7 7-3-3z"/><path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg>
+        Draw
+      </button>
+      <button class="m-tool-btn" [class.active]="activeTool === 'text'" (click)="setTool('text')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+        Text
+      </button>
+      <button class="m-tool-btn" [class.active]="activeTool === 'eraser'" (click)="setTool('eraser')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/></svg>
+        Erase
+      </button>
+
+      <div class="m-tool-separator"></div>
+
+      <!-- Transform -->
+      <button class="m-tool-btn" (click)="rotateLeft()" [disabled]="!hasImage">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2.5 2v6h6"/><path d="M2.5 8a10 10 0 1 1 3.44 6.56"/></svg>
+        Rot ↺
+      </button>
+      <button class="m-tool-btn" (click)="rotateRight()" [disabled]="!hasImage">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6"/><path d="M21.5 8A10 10 0 1 0 18 14.56"/></svg>
+        Rot ↻
+      </button>
+      <button class="m-tool-btn" (click)="flipH()" [disabled]="!hasImage">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h3"/><path d="M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3"/><path d="M12 20V4"/></svg>
+        Flip H
+      </button>
+      <button class="m-tool-btn" (click)="flipV()" [disabled]="!hasImage">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3"/><path d="M3 16v3a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3"/><path d="M4 12h16"/></svg>
+        Flip V
+      </button>
+
+      <div class="m-tool-separator"></div>
+
+      <!-- Adjust toggle -->
+      <button class="m-tool-btn" [class.active]="showAdjPanel" (click)="toggleAdjPanel()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+        Adjust
+      </button>
+    </div>
+
+    <!-- MOBILE ADJUSTMENTS PANEL -->
+    <div class="mobile-adj-panel" [class.open]="showAdjPanel">
+      <!-- Adjustments -->
+      <div class="adj-group">
+        <div class="adj-group-title">Adjustments</div>
+        <div class="adj-row">
+          <span class="adj-label">Bright</span>
+          <input type="range" min="-100" max="100" [(ngModel)]="brightness" (input)="applyAdjustments()" class="adj-range">
+          <span class="adj-val">{{ brightness }}</span>
+        </div>
+        <div class="adj-row">
+          <span class="adj-label">Contrast</span>
+          <input type="range" min="-100" max="100" [(ngModel)]="contrast" (input)="applyAdjustments()" class="adj-range">
+          <span class="adj-val">{{ contrast }}</span>
+        </div>
+        <div class="adj-row">
+          <span class="adj-label">Sat.</span>
+          <input type="range" min="-100" max="100" [(ngModel)]="saturation" (input)="applyAdjustments()" class="adj-range">
+          <span class="adj-val">{{ saturation }}</span>
+        </div>
+      </div>
+
+      <div class="adj-sep"></div>
+
+      <!-- Filters -->
+      <div class="adj-group">
+        <div class="adj-group-title">Filters</div>
+        <div class="filters-mobile">
+          <button class="filter-chip" [class.active]="activeFilter==='none'" (click)="applyFilter('none')"><span class="filter-chip-preview"></span>None</button>
+          <button class="filter-chip" [class.active]="activeFilter==='grayscale'" (click)="applyFilter('grayscale')"><span class="filter-chip-preview grayscale"></span>B&W</button>
+          <button class="filter-chip" [class.active]="activeFilter==='sepia'" (click)="applyFilter('sepia')"><span class="filter-chip-preview sepia"></span>Sepia</button>
+          <button class="filter-chip" [class.active]="activeFilter==='invert'" (click)="applyFilter('invert')"><span class="filter-chip-preview invert"></span>Invert</button>
+          <button class="filter-chip" [class.active]="activeFilter==='vintage'" (click)="applyFilter('vintage')"><span class="filter-chip-preview vintage"></span>Vintage</button>
+          <button class="filter-chip" [class.active]="activeFilter==='cool'" (click)="applyFilter('cool')"><span class="filter-chip-preview cool"></span>Cool</button>
+          <button class="filter-chip" [class.active]="activeFilter==='warm'" (click)="applyFilter('warm')"><span class="filter-chip-preview warm"></span>Warm</button>
+        </div>
+      </div>
+    </div>
   `,
   styles: [`
     :host { display: block; height: calc(100vh - 80px); overflow: hidden; }
@@ -481,7 +573,7 @@ interface HistoryState {
     .canvas-wrapper {
       position: relative; display: inline-block;
       box-shadow: 0 0 40px rgba(0,0,0,0.5); transition: transform 0.15s ease;
-      transform-origin: center center;
+      transform-origin: top center;
     }
     canvas { display: block; cursor: crosshair; }
 
@@ -501,113 +593,315 @@ interface HistoryState {
       .left-sidebar { width: 180px; }
       .right-sidebar { width: 200px; }
     }
+
     @media (max-width: 768px) {
-      :host { height: auto; overflow: visible; }
-      .editor-page { height: auto; min-height: 100vh; overflow: visible; }
+      /* Host and page layout */
+      :host { height: 100dvh; overflow: hidden; }
+      .editor-page { display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
+
+      /* Top Toolbar */
       .editor-toolbar {
-        padding: 12px;
+        padding: 8px 12px;
         height: auto;
         flex-wrap: wrap;
-        gap: 12px;
+        gap: 6px;
+        z-index: 100;
+        flex-shrink: 0;
       }
-      .toolbar-left { flex: 1; order: 1; min-width: auto; }
+      .toolbar-left { flex: 1; order: 1; min-width: 0; }
       .toolbar-right { flex: none; order: 2; }
-      
       .toolbar-center {
         flex: 0 0 100%;
         order: 3;
         justify-content: center;
-        padding-top: 10px;
+        padding-top: 6px;
         border-top: 1px dashed var(--glass-border);
-      }
-      
-      .editor-body { flex-direction: column; height: auto; overflow: visible; }
-      
-      .sidebar { 
-        width: 100% !important; 
-        flex-direction: row !important; 
-        overflow-x: auto; 
-        overflow-y: hidden; 
-        height: auto; 
-        max-height: 160px; 
-        border: none !important; 
-        flex-wrap: nowrap;
-        padding: 8px 12px;
-        background: rgba(15, 23, 42, 0.9);
-        backdrop-filter: blur(10px);
-        z-index: 10;
-      }
-      .left-sidebar { 
-        border-bottom: 1px solid var(--glass-border) !important;
-        position: sticky;
-        top: 0;
-      }
-      .right-sidebar { 
-        order: 3; /* Move below canvas */
-        border-top: 1px solid var(--glass-border) !important;
-        position: sticky;
-        bottom: 0;
-        max-height: 180px;
-      }
-
-      .sidebar-section { 
-        margin-bottom: 0; 
-        display: flex; 
-        gap: 8px; 
-        align-items: center; 
-        flex-shrink: 0; 
-        padding: 4px 12px;
-        border-right: 1px solid rgba(255,255,255,0.05);
-      }
-      .sidebar-label { font-size: 0.65rem; margin-bottom: 4px; opacity: 0.7; }
-      
-      .sidebar-btn {
-        flex-direction: column;
-        padding: 8px;
-        min-width: 64px;
-        height: 60px;
-        font-size: 0.7rem;
+        overflow-x: auto;
         gap: 4px;
       }
-      .sidebar-btn svg { width: 18px; height: 18px; }
-      .sidebar-btn span { font-size: 0.65rem; }
+      .file-name { max-width: 120px; font-size: 0.7rem; }
+      .toolbar-divider { display: none; }
 
-      .canvas-area { 
-        min-height: 350px; 
-        padding: 15px; 
+      /* Body: fills remaining space */
+      .editor-body {
         flex: 1;
-        order: 2;
-        background: #050810;
-        overflow: visible;
-      }
-      
-      .filters-grid { 
-        display: flex; 
-        flex-direction: row; 
-        gap: 8px; 
-        padding: 4px 0;
-      }
-      .filter-btn {
-        flex: 0 0 70px;
-        padding: 4px;
-      }
-      .filter-preview { width: 45px; height: 45px; }
-      .filter-name { font-size: 0.65rem; margin-top: 4px; }
-
-      .control-row {
         flex-direction: column;
-        align-items: flex-start;
-        gap: 4px;
-        min-width: 120px;
+        overflow: hidden;
+        position: relative;
       }
-      .range-input { width: 100px; }
-      .range-value { font-size: 0.7rem; }
+
+      /* Canvas area fills most of the body */
+      .canvas-area {
+        flex: 1;
+        order: 1;
+        width: 100%;
+        overflow: auto;
+        padding: 10px;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        background: #070d1a;
+        background-image: repeating-conic-gradient(rgba(255,255,255,0.02) 0% 25%, transparent 0% 50%);
+        background-size: 20px 20px;
+        position: relative;
+        box-sizing: border-box;
+        /* Leave room for fixed bottom bar */
+        padding-bottom: 80px;
+      }
+
+      /* Canvas wrapper */
+      .canvas-wrapper {
+        transform-origin: top center !important;
+        max-width: 100%;
+      }
+
+      /* Hide both sidebars completely — replaced by custom mobile bars */
+      .sidebar {
+        display: none !important;
+      }
+
+      /* Upload prompt */
+      .upload-prompt {
+        padding: 30px 20px;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+      }
+
+      /* Canvas */
+      canvas {
+        max-width: 100%;
+        height: auto;
+        display: block;
+      }
     }
+
+    /* ===== MOBILE TOOL BAR (fixed bottom) ===== */
+    .mobile-tools-bar {
+      display: none;
+    }
+    @media (max-width: 768px) {
+      .mobile-tools-bar {
+        display: flex;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 72px;
+        background: rgba(8, 12, 26, 0.97);
+        backdrop-filter: blur(16px);
+        border-top: 1px solid rgba(255,255,255,0.08);
+        z-index: 200;
+        align-items: stretch;
+        overflow-x: auto;
+        scrollbar-width: none;
+        padding: 0 4px;
+        gap: 2px;
+      }
+      .mobile-tools-bar::-webkit-scrollbar { display: none; }
+
+      .m-tool-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        flex: 1;
+        min-width: 56px;
+        padding: 8px 4px;
+        border: none;
+        border-radius: 0;
+        background: transparent;
+        color: rgba(148, 163, 184, 0.7);
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 0.6rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        transition: all 0.2s;
+        position: relative;
+      }
+
+      .m-tool-btn::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 2px;
+        background: #ec4899;
+        border-radius: 2px;
+        transition: width 0.2s;
+      }
+
+      .m-tool-btn.active {
+        color: #ec4899;
+      }
+      .m-tool-btn.active::after {
+        width: 28px;
+      }
+
+      .m-tool-btn:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+      }
+
+      .m-tool-btn svg {
+        width: 22px;
+        height: 22px;
+        flex-shrink: 0;
+      }
+
+      .m-tool-separator {
+        width: 1px;
+        background: rgba(255,255,255,0.06);
+        align-self: stretch;
+        margin: 10px 2px;
+        flex-shrink: 0;
+      }
+    }
+
+    /* ===== MOBILE ADJUSTMENTS PANEL (above bottom bar) ===== */
+    .mobile-adj-panel {
+      display: none;
+    }
+    @media (max-width: 768px) {
+      .mobile-adj-panel {
+        display: flex;
+        position: fixed;
+        bottom: 72px;
+        left: 0;
+        right: 0;
+        height: 130px;
+        background: rgba(8, 12, 26, 0.98);
+        backdrop-filter: blur(16px);
+        border-top: 1px solid rgba(255,255,255,0.1);
+        z-index: 190;
+        overflow-x: auto;
+        align-items: center;
+        padding: 10px 12px;
+        gap: 16px;
+        scrollbar-width: none;
+        transform: translateY(100%);
+        transition: transform 0.3s ease;
+        pointer-events: none;
+      }
+      .mobile-adj-panel.open {
+        transform: translateY(0);
+        pointer-events: auto;
+      }
+      .mobile-adj-panel::-webkit-scrollbar { display: none; }
+
+      .adj-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        flex-shrink: 0;
+        min-width: 130px;
+      }
+      .adj-group-title {
+        font-size: 0.6rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        color: rgba(148,163,184,0.5);
+      }
+      .adj-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .adj-label {
+        font-size: 0.7rem;
+        color: rgba(148,163,184,0.7);
+        min-width: 40px;
+        flex-shrink: 0;
+      }
+      .adj-range {
+        flex: 1;
+        min-width: 80px;
+        -webkit-appearance: none;
+        height: 4px;
+        border-radius: 2px;
+        background: rgba(148,163,184,0.15);
+        outline: none;
+        cursor: pointer;
+      }
+      .adj-range::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #ec4899;
+        cursor: pointer;
+        border: 2px solid #0a0f1e;
+      }
+      .adj-val {
+        font-size: 0.65rem;
+        color: rgba(148,163,184,0.6);
+        min-width: 28px;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .adj-sep {
+        width: 1px;
+        align-self: stretch;
+        background: rgba(255,255,255,0.06);
+        flex-shrink: 0;
+      }
+
+      .filters-mobile {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-shrink: 0;
+      }
+      .filter-chip {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        padding: 6px;
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 10px;
+        background: transparent;
+        cursor: pointer;
+        color: rgba(148,163,184,0.7);
+        font-size: 0.6rem;
+        font-weight: 600;
+        transition: all 0.2s;
+        min-width: 56px;
+        font-family: inherit;
+      }
+      .filter-chip.active {
+        border-color: #ec4899;
+        color: #ec4899;
+        background: rgba(236,72,153,0.08);
+      }
+      .filter-chip-preview {
+        width: 36px;
+        height: 28px;
+        border-radius: 6px;
+        background: linear-gradient(135deg,#667eea,#764ba2 50%,#f093fb);
+      }
+      .filter-chip-preview.grayscale { filter: grayscale(1); }
+      .filter-chip-preview.sepia { filter: sepia(1); }
+      .filter-chip-preview.invert { filter: invert(1); }
+      .filter-chip-preview.blur-p { filter: blur(2px); }
+      .filter-chip-preview.vintage { filter: sepia(0.4) contrast(1.2) brightness(0.9); }
+      .filter-chip-preview.cool { filter: saturate(0.8) hue-rotate(20deg) brightness(1.1); }
+      .filter-chip-preview.warm { filter: saturate(1.3) hue-rotate(-10deg) brightness(1.05); }
+    }
+
     @media (max-width: 480px) {
-      .toolbar-title { font-size: 0.95rem; }
-      .zoom-label { min-width: 34px; font-size: 0.7rem; }
-      .export-btn { padding: 6px 12px; font-size: 0.75rem; }
-      .sidebar-btn { min-width: 56px; }
+      .editor-toolbar { padding: 6px 10px; }
+      .toolbar-title { font-size: 0.88rem; }
+      .zoom-label { min-width: 28px; font-size: 0.65rem; }
+      .export-btn { padding: 6px 10px; font-size: 0.7rem; }
+      .m-tool-btn { min-width: 50px; font-size: 0.55rem; }
     }
   `]
 })
@@ -671,6 +965,9 @@ export class ImageEditorComponent implements AfterViewInit {
   // Export
   exportFormat = 'png';
   exportQuality = 92;
+
+  // Mobile panel
+  showAdjPanel = false;
 
   private ctx!: CanvasRenderingContext2D;
 
@@ -739,6 +1036,11 @@ export class ImageEditorComponent implements AfterViewInit {
   setTool(tool: ToolType): void {
     this.activeTool = tool;
     this.isCropping = false;
+    this.showAdjPanel = false; // close adj panel when selecting a tool
+  }
+
+  toggleAdjPanel(): void {
+    this.showAdjPanel = !this.showAdjPanel;
   }
 
   // ===== Canvas Events =====
@@ -1082,8 +1384,15 @@ export class ImageEditorComponent implements AfterViewInit {
     const canvas = this.canvasRef.nativeElement;
     const area = canvas.parentElement?.parentElement;
     if (!area) { this.zoom = 1; return; }
-    const scaleX = (area.clientWidth - 80) / canvas.width;
-    const scaleY = (area.clientHeight - 80) / canvas.height;
+
+    const isMobile = window.innerWidth <= 768;
+    const padding = isMobile ? 24 : 80;
+
+    const scaleX = (area.clientWidth - padding) / canvas.width;
+    // On mobile, canvas-area height is dynamic; use just width-based scale
+    const scaleY = isMobile
+      ? scaleX  // fit to width on mobile
+      : (area.clientHeight - padding) / canvas.height;
     this.zoom = Math.min(1, Math.min(scaleX, scaleY));
   }
 

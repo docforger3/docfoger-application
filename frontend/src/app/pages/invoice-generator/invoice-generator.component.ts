@@ -1290,59 +1290,181 @@ export class InvoiceGeneratorComponent implements OnInit {
   }
 
   async downloadPdf() {
-    if (this.isGenerating || !this.a4PageRef) return;
+    if (this.isGenerating) return;
     this.isGenerating = true;
 
-    // Force canvas to be visible on mobile before capturing
-    const previousMobileView = this.mobileView;
-    this.mobileView = 'preview';
+    const isMobile = window.innerWidth <= 768;
 
-    try {
-      const previousZoom = this.zoom;
-      this.zoom = 1;
-      await new Promise(r => setTimeout(r, 300)); // wait for DOM to scale and mobile visibility
+    if (!isMobile) {
+      // ── DESKTOP: direct PDF download via html2canvas + jsPDF ──────────────
+      // On desktop there are no mobile media queries, so html2canvas captures
+      // the A4 preview exactly as rendered — colours, template, and layout intact.
+      const previousMobileView = this.mobileView;
+      this.mobileView = 'preview';
+      try {
+        const previousZoom = this.zoom;
+        this.zoom = 1;
+        await new Promise(r => setTimeout(r, 300));
 
-      const canvas = await html2canvas(this.a4PageRef.nativeElement, {
-        scale: 2,
-        useCORS: true,
-        logging: false
-      });
+        const canvas = await html2canvas(this.a4PageRef.nativeElement, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          allowTaint: true,
+          windowWidth: 1280,
+        });
 
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      
-      // Calculate how mathematically tall the image is mapped to A4 scaling
-      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-      
-      let heightLeft = imgHeight;
-      let position = 0;
+        const imgData  = canvas.toDataURL('image/png');
+        const pdf      = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const pdfW     = pdf.internal.pageSize.getWidth();
+        const pdfH     = pdf.internal.pageSize.getHeight();
+        const imgH     = (canvas.height * pdfW) / canvas.width;
+        let heightLeft = imgH;
+        let position   = 0;
 
-      // Drop the first page segment
-      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
-      heightLeft -= pageHeight;
+        pdf.addImage(imgData, 'PNG', 0, position, pdfW, imgH);
+        heightLeft -= pdfH;
+        while (heightLeft >= 1) {
+          position = heightLeft - imgH;
+          pdf.addPage();
+          pdf.addImage(imgData, 'PNG', 0, position, pdfW, imgH);
+          heightLeft -= pdfH;
+        }
 
-      // Slice through iteratively creating subsequent pages if the math shows remaining height overlapping bounds
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
-        heightLeft -= pageHeight;
+        pdf.save(`Invoice_${this.invoice.details.invoiceNumber}.pdf`);
+        this.zoom = previousZoom;
+      } catch (err) {
+        console.error('PDF error:', err);
+        alert('PDF generation failed. Please try again.');
+      } finally {
+        this.isGenerating = false;
+        this.mobileView = previousMobileView;
       }
 
-      pdf.save(`Invoice_${this.invoice.details.invoiceNumber}.pdf`);
-
-      this.zoom = previousZoom;
-    } catch (err) {
-      console.error(err);
-      alert('PDF generation failed');
-    } finally {
-      this.isGenerating = false;
-      this.mobileView = previousMobileView;
+    } else {
+      // ── MOBILE: iframe print dialog ────────────────────────────────────────
+      // Uses pure HTML table (no flexbox/classes) so layout is screen-size-proof.
+      try {
+        const html = this.buildInvoiceHtml();
+        const iframe = document.createElement('iframe');
+        iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:none;opacity:0;';
+        document.body.appendChild(iframe);
+        const iDoc = iframe.contentDocument || (iframe.contentWindow as any)?.document;
+        if (iDoc) {
+          iDoc.open(); iDoc.write(html); iDoc.close();
+          iframe.onload = () => {
+            try { (iframe.contentWindow as any).print(); } catch(e) { console.error(e); }
+            setTimeout(() => { try { document.body.removeChild(iframe); } catch(e) {} }, 15000);
+          };
+        }
+      } catch(err) {
+        console.error('PDF error:', err);
+        alert('PDF generation failed. Please try again.');
+      } finally {
+        this.isGenerating = false;
+      }
     }
   }
+
+  /** Builds a printer-friendly self-contained HTML invoice using HTML table layout */
+  private buildInvoiceHtml(): string {
+    const inv = this.invoice;
+    const clr = this.currentColor;
+    const sym = inv.invoiceConfig.currencySymbol;
+    const fmt = (n: number) => n.toFixed(2);
+    const br  = (s: string) => (s||'').replace(/\n/g,'<br>');
+
+    const rows = inv.items.map(i =>
+      `<tr><td style="padding:10px 8px;border-bottom:1px solid #eee;font-size:13px">${i.description}</td>` +
+      `<td style="padding:10px 8px;border-bottom:1px solid #eee;text-align:center;font-size:13px">${i.quantity}</td>` +
+      `<td style="padding:10px 8px;border-bottom:1px solid #eee;text-align:right;font-size:13px">${sym}${fmt(i.rate)}</td>` +
+      `<td style="padding:10px 8px;border-bottom:1px solid #eee;text-align:right;font-size:13px;font-weight:600">${sym}${fmt(i.amount)}</td></tr>`
+    ).join('');
+
+    const fromExtra = [inv.sender.email, inv.sender.phone,
+      (inv.invoiceConfig.showTaxId && inv.sender.taxId) ? inv.invoiceConfig.taxIdName+': '+inv.sender.taxId : ''
+    ].filter(Boolean).join('<br>');
+
+    const toExtra = [inv.recipient.email, inv.recipient.phone,
+      (inv.invoiceConfig.showTaxId && inv.recipient.taxId) ? inv.invoiceConfig.taxIdName+': '+inv.recipient.taxId : ''
+    ].filter(Boolean).join('<br>');
+
+    return `<!DOCTYPE html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Invoice ${inv.details.invoiceNumber}</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:Arial,Helvetica,sans-serif;color:#333;background:#fff;
+       -webkit-print-color-adjust:exact;print-color-adjust:exact}
+  @page{size:A4 portrait;margin:12mm 12mm}
+</style>
+</head><body>
+<table width="700" cellpadding="0" cellspacing="0" border="0" style="margin:24px auto;border-collapse:collapse">
+  <tr>
+    <td style="padding:0 0 16px;border-bottom:3px solid ${clr};vertical-align:bottom">
+      <span style="font-size:28px;font-weight:900;letter-spacing:3px;text-transform:uppercase;color:${clr}">INVOICE</span>
+    </td>
+    <td style="padding:0 0 16px;border-bottom:3px solid ${clr};text-align:right;vertical-align:bottom">
+      <strong style="font-size:14px;color:#111">${inv.details.invoiceNumber}</strong><br>
+      <span style="font-size:12px;color:#666">Issued: ${inv.details.issueDate}</span><br>
+      <span style="font-size:12px;color:#666">Due: ${inv.details.dueDate}</span>
+    </td>
+  </tr>
+  <tr><td colspan="2" style="height:22px"></td></tr>
+  <tr>
+    <td style="vertical-align:top;padding-bottom:26px">
+      <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:${clr};margin-bottom:7px">FROM</div>
+      <div style="font-size:14px;font-weight:700;color:#111;margin-bottom:4px">${inv.sender.name}</div>
+      <div style="font-size:12px;color:#555;line-height:1.7">${br(inv.sender.address)}${fromExtra?'<br>'+fromExtra:''}</div>
+    </td>
+    <td style="vertical-align:top;text-align:right;padding-bottom:26px">
+      <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:${clr};margin-bottom:7px">BILLED TO</div>
+      <div style="font-size:14px;font-weight:700;color:#111;margin-bottom:4px">${inv.recipient.name}</div>
+      <div style="font-size:12px;color:#555;line-height:1.7">${br(inv.recipient.address)}${toExtra?'<br>'+toExtra:''}</div>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" style="padding-bottom:22px">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <thead><tr style="background:${clr}">
+          <th style="padding:10px 8px;text-align:left;color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:0.8px;width:50%">Description</th>
+          <th style="padding:10px 8px;text-align:center;color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:0.8px">Qty</th>
+          <th style="padding:10px 8px;text-align:right;color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:0.8px">Unit Price</th>
+          <th style="padding:10px 8px;text-align:right;color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:0.8px">Amount</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </td>
+  </tr>
+  <tr>
+    <td></td>
+    <td style="padding-bottom:26px">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr><td style="padding:6px 0;font-size:13px;color:#555;border-bottom:1px solid #eee">Subtotal</td>
+            <td style="padding:6px 0;font-size:13px;color:#555;border-bottom:1px solid #eee;text-align:right">${sym}${fmt(inv.totals.subTotal)}</td></tr>
+        <tr><td style="padding:6px 0;font-size:13px;color:#555;border-bottom:1px solid #eee">${inv.invoiceConfig.taxName} (${inv.invoiceConfig.taxRate}%)</td>
+            <td style="padding:6px 0;font-size:13px;color:#555;border-bottom:1px solid #eee;text-align:right">${sym}${fmt(inv.totals.taxAmount)}</td></tr>
+        <tr><td style="padding:6px 0;font-size:13px;color:#555;border-bottom:1px solid #eee">Discount</td>
+            <td style="padding:6px 0;font-size:13px;color:#555;border-bottom:1px solid #eee;text-align:right">-${sym}${fmt(inv.totals.discount)}</td></tr>
+        <tr><td style="padding:12px 0;font-size:17px;font-weight:800;color:${clr}">Total</td>
+            <td style="padding:12px 0;font-size:17px;font-weight:800;color:${clr};text-align:right">${sym}${fmt(inv.totals.total)}</td></tr>
+      </table>
+    </td>
+  </tr>
+  ${(inv.paymentDetails||inv.notes) ? `<tr><td colspan="2" style="border-top:1px solid #eee;padding-top:16px">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+      <td style="vertical-align:top;width:50%;font-size:12px;color:#555;line-height:1.7;padding-right:20px">
+        ${inv.paymentDetails?`<strong style="color:#333;display:block;margin-bottom:3px">Payment Instructions</strong>${br(inv.paymentDetails)}`:''}
+      </td>
+      <td style="vertical-align:top;text-align:right;font-size:12px;color:#555;line-height:1.7">
+        ${inv.notes?`<strong style="color:#333;display:block;margin-bottom:3px">Notes</strong>${br(inv.notes)}`:''}
+      </td>
+    </tr></table></td></tr>` : ''}
+</table>
+<script>window.addEventListener('load',function(){setTimeout(function(){window.print();},300);});<\/script>
+</body></html>`;
+  }
+
 
   downloadWord() {
     // Generate a simple Word Doc mapping using HTML Blob

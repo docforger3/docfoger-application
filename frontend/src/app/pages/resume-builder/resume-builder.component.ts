@@ -880,11 +880,17 @@ interface ResumeData {
       .toolbar-center {
         flex: 0 0 100%; 
         order: 3;
-        justify-content: center;
-        padding-top: 10px;
+        justify-content: flex-start;
+        padding: 12px 0;
         margin-top: 8px;
         border-top: 1px dashed var(--glass-border);
+        flex-wrap: wrap;
+        gap: 12px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
       }
+      .style-group { flex-shrink: 0; }
+      .select-field { font-size: 0.82rem; padding: 6px 8px; }
       .toolbar-label { display: none; }
       .toolbar-title { font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
@@ -912,8 +918,8 @@ interface ResumeData {
       }
 
       .canvas-wrapper {
-        padding: 16px;
-        justify-content: flex-start;
+        padding: 10px;
+        justify-content: center;
       }
 
       .a4-page {
@@ -926,11 +932,16 @@ interface ResumeData {
 
     @media (max-width: 480px) {
       .editor-toolbar { padding: 6px 10px; }
-      .action-btn { padding: 8px 12px; font-size: 0.82rem; }
+      .action-btn { padding: 6px 10px; font-size: 0.75rem; gap: 4px; }
+      .action-btn svg { width: 14px; height: 14px; }
+      .toolbar-title { font-size: 0.9rem; }
       .accordion-header { padding: 14px 16px; }
       .accordion-body { padding: 16px; }
       .form-grid { grid-template-columns: 1fr; }
       .input-block.full-width { grid-column: span 1; }
+      .toolbar-center { gap: 8px; }
+      .select-field { font-size: 0.75rem; max-width: 90px; }
+      .color-picker { width: 28px; height: 28px; }
     }
 
     /* A4 PAGE SPECIFICATIONS (210mm x 297mm) */
