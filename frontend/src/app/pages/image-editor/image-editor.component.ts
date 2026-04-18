@@ -164,6 +164,22 @@ interface HistoryState {
             <div class="sidebar-label">Text Options</div>
             <input type="text" [(ngModel)]="textInput" placeholder="Enter text..." class="text-field" id="text-input">
             <div class="control-row">
+              <label>Font</label>
+              <select [(ngModel)]="textFont" class="select-input" id="text-font">
+                <option value="Inter, Arial, sans-serif">Inter (Default)</option>
+                <option value="Arial, sans-serif">Arial</option>
+                <option value="Georgia, serif">Georgia</option>
+                <option value="'Times New Roman', serif">Times New Roman</option>
+                <option value="'Courier New', monospace">Courier New</option>
+                <option value="Verdana, sans-serif">Verdana</option>
+                <option value="Impact, fantasy">Impact</option>
+                <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+                <option value="'Comic Sans MS', cursive">Comic Sans</option>
+                <option value="Tahoma, sans-serif">Tahoma</option>
+                <option value="'Palatino Linotype', serif">Palatino</option>
+              </select>
+            </div>
+            <div class="control-row">
               <label>Size</label>
               <input type="range" [min]="12" [max]="120" [(ngModel)]="textSize" class="range-input">
               <span class="range-value">{{ textSize }}px</span>
@@ -173,8 +189,9 @@ interface HistoryState {
               <input type="color" [(ngModel)]="textColor" class="color-input" id="text-color">
             </div>
             <div class="control-row">
-              <label>Bold</label>
-              <button class="toggle-btn" [class.active]="textBold" (click)="textBold = !textBold">B</button>
+              <label>Style</label>
+              <button class="toggle-btn" [class.active]="textBold" (click)="textBold = !textBold" title="Bold"><strong>B</strong></button>
+              <button class="toggle-btn" [class.active]="textItalic" (click)="textItalic = !textItalic" title="Italic" style="font-style:italic;margin-left:4px"><em>I</em></button>
             </div>
           </div>
         </div>
@@ -200,13 +217,16 @@ interface HistoryState {
 
           <!-- Canvas -->
           <div class="canvas-wrapper" *ngIf="hasImage" [style.transform]="'scale(' + zoom + ')'" id="canvas-wrapper">
-            <canvas #mainCanvas
-                    (mousedown)="onCanvasMouseDown($event)"
-                    (mousemove)="onCanvasMouseMove($event)"
-                    (mouseup)="onCanvasMouseUp($event)"
-                    (mouseleave)="onCanvasMouseUp($event)"
-                    id="main-canvas">
-            </canvas>
+          <canvas #mainCanvas
+                  (mousedown)="onCanvasMouseDown($event)"
+                  (mousemove)="onCanvasMouseMove($event)"
+                  (mouseup)="onCanvasMouseUp($event)"
+                  (mouseleave)="onCanvasMouseUp($event)"
+                  (touchstart)="onCanvasTouchStart($event)"
+                  (touchmove)="onCanvasTouchMove($event)"
+                  (touchend)="onCanvasTouchEnd($event)"
+                  id="main-canvas">
+          </canvas>
             <!-- Crop overlay -->
             <div class="crop-overlay" *ngIf="activeTool === 'crop' && isCropping"
                  [style.left.px]="cropRect.x" [style.top.px]="cropRect.y"
@@ -369,6 +389,22 @@ interface HistoryState {
 
       <div class="m-tool-separator"></div>
 
+      <!-- Zoom Controls -->
+      <div class="m-zoom-row">
+        <button class="m-zoom-btn" (click)="zoomOut()" [disabled]="!hasImage" title="Zoom Out">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M8 11h6"/></svg>
+        </button>
+        <span class="m-zoom-label">{{ Math.round(zoom * 100) }}%</span>
+        <button class="m-zoom-btn" (click)="zoomIn()" [disabled]="!hasImage" title="Zoom In">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M11 8v6"/><path d="M8 11h6"/></svg>
+        </button>
+        <button class="m-zoom-btn fit-btn" (click)="fitToScreen()" [disabled]="!hasImage" title="Fit to Screen">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="m21 3-7 7"/><path d="m3 21 7-7"/></svg>
+        </button>
+      </div>
+
+      <div class="m-tool-separator"></div>
+
       <!-- Adjust toggle -->
       <button class="m-tool-btn" [class.active]="showAdjPanel" (click)="toggleAdjPanel()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
@@ -378,6 +414,55 @@ interface HistoryState {
 
     <!-- MOBILE ADJUSTMENTS PANEL -->
     <div class="mobile-adj-panel" [class.open]="showAdjPanel">
+
+      <!-- Draw Tool Options (shows when draw/eraser active) -->
+      <div class="adj-group" *ngIf="activeTool === 'draw' || activeTool === 'eraser'">
+        <div class="adj-group-title">{{ activeTool === 'draw' ? 'Brush' : 'Eraser' }}</div>
+        <div class="adj-row">
+          <span class="adj-label">Size</span>
+          <input type="range" min="2" max="80" [(ngModel)]="brushSize" class="adj-range">
+          <span class="adj-val">{{ brushSize }}px</span>
+        </div>
+        <div class="adj-row" *ngIf="activeTool === 'draw'">
+          <span class="adj-label">Color</span>
+          <input type="color" [(ngModel)]="drawColor" class="m-color-input">
+          <span class="adj-val" style="font-size:0.6rem">{{ drawColor }}</span>
+        </div>
+      </div>
+
+      <div class="adj-sep" *ngIf="activeTool === 'draw' || activeTool === 'eraser'"></div>
+
+      <!-- Text Tool Options (shows when text active) -->
+      <div class="adj-group" *ngIf="activeTool === 'text'">
+        <div class="adj-group-title">Text — tap canvas to place</div>
+        <div class="adj-row">
+          <input type="text" [(ngModel)]="textInput" placeholder="Enter text..." class="m-text-field" maxlength="80">
+        </div>
+        <!-- Font family chips -->
+        <div class="adj-row" style="flex-wrap:wrap;gap:5px;">
+          <span class="adj-label" style="align-self:flex-start;padding-top:2px">Font</span>
+          <div class="m-font-chips">
+            <button class="m-font-chip" *ngFor="let f of fontOptions"
+                    [class.active]="textFont === f.value"
+                    [style.font-family]="f.value"
+                    (click)="textFont = f.value">{{ f.label }}</button>
+          </div>
+        </div>
+        <div class="adj-row">
+          <span class="adj-label">Size</span>
+          <input type="range" min="12" max="120" [(ngModel)]="textSize" class="adj-range">
+          <span class="adj-val">{{ textSize }}px</span>
+        </div>
+        <div class="adj-row">
+          <span class="adj-label">Color</span>
+          <input type="color" [(ngModel)]="textColor" class="m-color-input">
+          <button class="m-bold-btn" [class.active]="textBold" (click)="textBold = !textBold" title="Bold">B</button>
+          <button class="m-bold-btn" [class.active]="textItalic" (click)="textItalic = !textItalic" title="Italic" style="font-style:italic">I</button>
+        </div>
+      </div>
+
+      <div class="adj-sep" *ngIf="activeTool === 'text'"></div>
+
       <!-- Adjustments -->
       <div class="adj-group">
         <div class="adj-group-title">Adjustments</div>
@@ -413,6 +498,12 @@ interface HistoryState {
           <button class="filter-chip" [class.active]="activeFilter==='warm'" (click)="applyFilter('warm')"><span class="filter-chip-preview warm"></span>Warm</button>
         </div>
       </div>
+    </div>
+
+    <!-- SELECT TOOL INFO TOAST (mobile) -->
+    <div class="select-info-toast" *ngIf="activeTool === 'select' && hasImage && showSelectInfo">
+      <span>📐 {{ canvasPixelW }}×{{ canvasPixelH }}px &nbsp;|&nbsp; {{ fileName }}</span>
+      <button class="toast-close" (click)="showSelectInfo = false">✕</button>
     </div>
   `,
   styles: [`
@@ -582,11 +673,28 @@ interface HistoryState {
       background: rgba(236,72,153,0.08); pointer-events: none;
     }
     .crop-apply-btn, .crop-cancel-btn {
-      position: absolute; bottom: -36px; padding: 4px 14px; border: none; border-radius: 6px;
-      font-size: 0.78rem; font-weight: 600; cursor: pointer; pointer-events: auto; font-family: inherit;
+      position: absolute; bottom: -40px; padding: 6px 16px; border: none; border-radius: 8px;
+      font-size: 0.82rem; font-weight: 600; cursor: pointer; pointer-events: auto;
+      font-family: inherit; min-height: 36px; touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
-    .crop-apply-btn { right: 36px; background: #10b981; color: white; }
+    .crop-apply-btn { right: 44px; background: #10b981; color: white; }
     .crop-cancel-btn { right: 0; background: rgba(239,68,68,0.8); color: white; }
+
+    /* On mobile make crop buttons bigger and float above the selection box */
+    @media (max-width: 768px) {
+      .crop-apply-btn, .crop-cancel-btn {
+        bottom: auto;
+        top: -48px;
+        padding: 10px 20px;
+        font-size: 0.9rem;
+        min-height: 44px;
+        border-radius: 10px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      }
+      .crop-apply-btn { right: 52px; }
+      .crop-cancel-btn { right: 0; }
+    }
 
     /* ===== Responsive ===== */
     @media (max-width: 1024px) {
@@ -761,6 +869,38 @@ interface HistoryState {
         margin: 10px 2px;
         flex-shrink: 0;
       }
+
+      .m-zoom-row {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        flex-shrink: 0;
+        background: rgba(255,255,255,0.04);
+        border-radius: 10px;
+        padding: 4px 6px;
+        margin: 0 2px;
+      }
+
+      .m-zoom-btn {
+        width: 32px; height: 32px;
+        border: none; border-radius: 8px;
+        background: transparent; color: rgba(148,163,184,0.8);
+        cursor: pointer; display: flex; align-items: center; justify-content: center;
+        font-family: inherit; transition: all 0.15s; flex-shrink: 0;
+      }
+      .m-zoom-btn svg { width: 18px; height: 18px; }
+      .m-zoom-btn:active:not(:disabled) {
+        background: rgba(236,72,153,0.15); color: #ec4899; transform: scale(0.9);
+      }
+      .m-zoom-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+      .m-zoom-btn.fit-btn { color: rgba(139,92,246,0.85); }
+
+      .m-zoom-label {
+        font-size: 0.72rem; font-weight: 700;
+        color: rgba(148,163,184,0.9);
+        min-width: 38px; text-align: center;
+        font-variant-numeric: tabular-nums; letter-spacing: 0.3px;
+      }
     }
 
     /* ===== MOBILE ADJUSTMENTS PANEL (above bottom bar) ===== */
@@ -903,6 +1043,72 @@ interface HistoryState {
       .export-btn { padding: 6px 10px; font-size: 0.7rem; }
       .m-tool-btn { min-width: 50px; font-size: 0.55rem; }
     }
+
+    /* ===== Mobile tool controls (color picker, text field, bold btn) ===== */
+    .m-color-input {
+      width: 32px; height: 32px; border-radius: 8px;
+      border: 2px solid rgba(255,255,255,0.15); cursor: pointer;
+      background: transparent; padding: 2px; flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .m-color-input::-webkit-color-swatch-wrapper { padding: 2px; }
+    .m-color-input::-webkit-color-swatch { border: none; border-radius: 5px; }
+
+    .m-text-field {
+      flex: 1; padding: 8px 10px; border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px; background: rgba(255,255,255,0.06);
+      color: #e2e8f0; font-family: inherit; font-size: 0.85rem; outline: none;
+      min-width: 0;
+    }
+    .m-text-field:focus { border-color: #ec4899; }
+
+    .m-bold-btn {
+      width: 32px; height: 32px; border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.12); background: transparent;
+      color: rgba(148,163,184,0.8); font-weight: 900; font-size: 1rem;
+      cursor: pointer; font-family: inherit; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+    }
+    .m-bold-btn.active { background: rgba(236,72,153,0.2); border-color: #ec4899; color: #ec4899; }
+
+    /* ===== Font chip row (mobile text tool) ===== */
+    .m-font-chips {
+      display: flex; gap: 6px; overflow-x: auto; flex: 1;
+      padding-bottom: 2px; -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .m-font-chips::-webkit-scrollbar { display: none; }
+    .m-font-chip {
+      border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
+      background: rgba(255,255,255,0.04); color: rgba(148,163,184,0.85);
+      padding: 5px 10px; font-size: 0.78rem; white-space: nowrap;
+      cursor: pointer; flex-shrink: 0; transition: all 0.15s;
+      font-family: inherit; /* overridden inline per chip */
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    .m-font-chip.active {
+      border-color: #ec4899; color: #ec4899; background: rgba(236,72,153,0.1);
+    }
+    .m-font-chip:active { transform: scale(0.93); }
+
+    /* ===== Select tool info toast ===== */
+    .select-info-toast {
+      position: fixed; bottom: 82px; left: 50%; transform: translateX(-50%);
+      background: rgba(15,23,42,0.95); border: 1px solid rgba(139,92,246,0.3);
+      border-radius: 12px; padding: 10px 16px;
+      display: flex; align-items: center; gap: 12px;
+      font-size: 0.8rem; color: #c4b5fd; font-weight: 600;
+      backdrop-filter: blur(12px); z-index: 300; white-space: nowrap;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      max-width: calc(100vw - 32px); overflow: hidden; text-overflow: ellipsis;
+    }
+    .toast-close {
+      border: none; background: transparent; color: rgba(148,163,184,0.6);
+      cursor: pointer; font-size: 0.9rem; padding: 0; line-height: 1;
+      flex-shrink: 0;
+    }
   `]
 })
 export class ImageEditorComponent implements AfterViewInit {
@@ -931,6 +1137,22 @@ export class ImageEditorComponent implements AfterViewInit {
   textSize = 32;
   textColor = '#ffffff';
   textBold = false;
+  textItalic = false;
+  textFont = 'Inter, Arial, sans-serif';
+
+  readonly fontOptions = [
+    { label: 'Inter',     value: 'Inter, Arial, sans-serif' },
+    { label: 'Arial',     value: 'Arial, sans-serif' },
+    { label: 'Georgia',   value: 'Georgia, serif' },
+    { label: 'Times',     value: "'Times New Roman', serif" },
+    { label: 'Courier',   value: "'Courier New', monospace" },
+    { label: 'Verdana',   value: 'Verdana, sans-serif' },
+    { label: 'Impact',    value: 'Impact, fantasy' },
+    { label: 'Trebuchet', value: "'Trebuchet MS', sans-serif" },
+    { label: 'Comic',     value: "'Comic Sans MS', cursive" },
+    { label: 'Tahoma',    value: 'Tahoma, sans-serif' },
+    { label: 'Palatino',  value: "'Palatino Linotype', serif" },
+  ];
 
   // Crop
   isCropping = false;
@@ -968,6 +1190,9 @@ export class ImageEditorComponent implements AfterViewInit {
 
   // Mobile panel
   showAdjPanel = false;
+  showSelectInfo = false;
+  canvasPixelW = 0;
+  canvasPixelH = 0;
 
   private ctx!: CanvasRenderingContext2D;
 
@@ -1036,7 +1261,19 @@ export class ImageEditorComponent implements AfterViewInit {
   setTool(tool: ToolType): void {
     this.activeTool = tool;
     this.isCropping = false;
-    this.showAdjPanel = false; // close adj panel when selecting a tool
+    // On mobile, toggling draw/text/eraser auto-opens the adj panel
+    if (window.innerWidth <= 768 && (tool === 'draw' || tool === 'eraser' || tool === 'text')) {
+      this.showAdjPanel = true;
+    } else if (tool === 'select') {
+      this.showAdjPanel = false;
+      if (this.hasImage) {
+        const canvas = this.canvasRef?.nativeElement;
+        if (canvas) { this.canvasPixelW = canvas.width; this.canvasPixelH = canvas.height; }
+        this.showSelectInfo = true;
+      }
+    } else {
+      this.showAdjPanel = false;
+    }
   }
 
   toggleAdjPanel(): void {
@@ -1084,16 +1321,66 @@ export class ImageEditorComponent implements AfterViewInit {
     }
   }
 
-  getCanvasCoords(event: MouseEvent): { x: number; y: number } {
+  onCanvasTouchStart(event: TouchEvent): void {
+    if (!this.hasImage || !event.touches.length) return;
+    event.preventDefault(); // prevent page scroll / pinch-zoom interference
+    const t = event.touches[0];
+    const { x, y } = this.getCanvasCoords(t);
+
+    if (this.activeTool === 'draw' || this.activeTool === 'eraser') {
+      this.isDrawing = true;
+      this.lastX = x;
+      this.lastY = y;
+    } else if (this.activeTool === 'crop') {
+      this.isCropping = true;
+      this.cropStart = { x, y };
+      this.cropRect = { x, y, w: 0, h: 0 };
+    } else if (this.activeTool === 'text') {
+      this.addText(x, y);
+    }
+  }
+
+  onCanvasTouchMove(event: TouchEvent): void {
+    if (!this.hasImage || !event.touches.length) return;
+    event.preventDefault();
+    const t = event.touches[0];
+    const { x, y } = this.getCanvasCoords(t);
+
+    if (this.isDrawing && (this.activeTool === 'draw' || this.activeTool === 'eraser')) {
+      this.draw(x, y);
+    } else if (this.isCropping && this.activeTool === 'crop') {
+      this.cropRect = {
+        x: Math.min(this.cropStart.x, x),
+        y: Math.min(this.cropStart.y, y),
+        w: Math.abs(x - this.cropStart.x),
+        h: Math.abs(y - this.cropStart.y)
+      };
+    }
+  }
+
+  onCanvasTouchEnd(event: TouchEvent): void {
+    event.preventDefault();
+    if (this.isDrawing) {
+      this.isDrawing = false;
+      this.saveHistory(this.activeTool === 'eraser' ? 'Erase' : 'Draw');
+    }
+    // Note: isCropping stays true — user taps Apply/Cancel buttons
+  }
+
+  getCanvasCoords(event: { clientX: number; clientY: number }): { x: number; y: number } {
     const canvas = this.canvasRef.nativeElement;
     const rect = canvas.getBoundingClientRect();
+    // getBoundingClientRect gives the DISPLAYED size (after CSS zoom transform)
+    // canvas.width/height is the PIXEL size
+    // So we must convert screen coords → canvas pixel coords via the display ratio
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
     return {
-      x: (event.clientX - rect.left) * scaleX,
-      y: (event.clientY - rect.top) * scaleY
+      x: Math.round((event.clientX - rect.left) * scaleX),
+      y: Math.round((event.clientY - rect.top)  * scaleY)
     };
   }
+
 
   // ===== Drawing =====
   draw(x: number, y: number): void {
@@ -1102,8 +1389,9 @@ export class ImageEditorComponent implements AfterViewInit {
     this.ctx.lineJoin = 'round';
 
     if (this.activeTool === 'eraser') {
-      this.ctx.globalCompositeOperation = 'destination-out';
-      this.ctx.strokeStyle = 'rgba(0,0,0,1)';
+      // Fill with opaque white so erasing is visible regardless of background
+      this.ctx.globalCompositeOperation = 'source-over';
+      this.ctx.strokeStyle = '#ffffff';
     } else {
       this.ctx.globalCompositeOperation = 'source-over';
       this.ctx.strokeStyle = this.drawColor;
@@ -1123,7 +1411,11 @@ export class ImageEditorComponent implements AfterViewInit {
     if (!this.textInput.trim()) return;
     this.ctx.globalCompositeOperation = 'source-over';
     this.ctx.fillStyle = this.textColor;
-    this.ctx.font = `${this.textBold ? 'bold ' : ''}${this.textSize}px Inter, Arial, sans-serif`;
+    const style = [
+      this.textItalic ? 'italic' : '',
+      this.textBold   ? 'bold'   : ''
+    ].filter(Boolean).join(' ');
+    this.ctx.font = `${style ? style + ' ' : ''}${this.textSize}px ${this.textFont}`;
     this.ctx.textBaseline = 'top';
     this.ctx.fillText(this.textInput, x, y);
     this.saveHistory('Add Text');
@@ -1386,14 +1678,30 @@ export class ImageEditorComponent implements AfterViewInit {
     if (!area) { this.zoom = 1; return; }
 
     const isMobile = window.innerWidth <= 768;
-    const padding = isMobile ? 24 : 80;
 
+    if (isMobile) {
+      // On mobile: always open at 100% so users see the image at full resolution.
+      // They can pan/pinch or use the +/- buttons to adjust.
+      this.zoom = 1;
+      return;
+    }
+
+    // Desktop: fit to canvas area
+    const padding = 80;
     const scaleX = (area.clientWidth - padding) / canvas.width;
-    // On mobile, canvas-area height is dynamic; use just width-based scale
-    const scaleY = isMobile
-      ? scaleX  // fit to width on mobile
-      : (area.clientHeight - padding) / canvas.height;
+    const scaleY = (area.clientHeight - padding) / canvas.height;
     this.zoom = Math.min(1, Math.min(scaleX, scaleY));
+  }
+
+  /** Fit image to screen width — available from the mobile zoom bar */
+  fitToScreen(): void {
+    if (!this.canvasRef) return;
+    const canvas = this.canvasRef.nativeElement;
+    const area = canvas.parentElement?.parentElement;
+    if (!area) { this.zoom = 1; return; }
+    const padding = 24;
+    const scaleX = (area.clientWidth - padding) / canvas.width;
+    this.zoom = Math.min(1, scaleX);
   }
 
   // ===== History =====
