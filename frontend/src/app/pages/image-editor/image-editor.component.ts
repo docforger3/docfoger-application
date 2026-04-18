@@ -1,4 +1,4 @@
-import { Component, ViewChild, ElementRef, AfterViewInit, OnDestroy } from '@angular/core';
+import { Component, ViewChild, ElementRef, AfterViewInit, OnDestroy, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -216,7 +216,11 @@ interface HistoryState {
           </div>
 
           <!-- Canvas -->
-          <div class="canvas-wrapper" *ngIf="hasImage" [style.transform]="'scale(' + zoom + ')'" id="canvas-wrapper">
+          <div class="canvas-wrapper"
+               *ngIf="hasImage"
+               [style.width.px]="canvasDisplayW"
+               [style.height.px]="canvasDisplayH"
+               id="canvas-wrapper">
           <canvas #mainCanvas
                   (mousedown)="onCanvasMouseDown($event)"
                   (mousemove)="onCanvasMouseMove($event)"
@@ -228,11 +232,25 @@ interface HistoryState {
                   id="main-canvas">
           </canvas>
             <!-- Crop overlay -->
-            <div class="crop-overlay" *ngIf="activeTool === 'crop' && isCropping"
-                 [style.left.px]="cropRect.x" [style.top.px]="cropRect.y"
-                 [style.width.px]="cropRect.w" [style.height.px]="cropRect.h">
+            <div class="crop-overlay"
+                 *ngIf="activeTool === 'crop' && hasCropSelection"
+                 [style.left.px]="cropRect.x * zoom"
+                 [style.top.px]="cropRect.y * zoom"
+                 [style.width.px]="cropRect.w * zoom"
+                 [style.height.px]="cropRect.h * zoom">
+              <div class="crop-dims">{{ cropRect.w }}×{{ cropRect.h }}px</div>
               <button class="crop-apply-btn" (click)="applyCrop()" id="btn-apply-crop">✓ Apply</button>
               <button class="crop-cancel-btn" (click)="cancelCrop()" id="btn-cancel-crop">✕</button>
+            </div>
+
+            <!-- Crop instruction hint (desktop) -->
+            <div class="crop-hint" *ngIf="activeTool === 'crop' && !hasCropSelection">
+              Click and drag on the image to select the crop area
+            </div>
+
+            <!-- Text placement hint -->
+            <div class="crop-hint" *ngIf="activeTool === 'text' && !textOverlay">
+              Tap the image to place your text, then drag to position
             </div>
           </div>
         </div>
@@ -505,6 +523,25 @@ interface HistoryState {
       <span>📐 {{ canvasPixelW }}×{{ canvasPixelH }}px &nbsp;|&nbsp; {{ fileName }}</span>
       <button class="toast-close" (click)="showSelectInfo = false">✕</button>
     </div>
+
+    <!-- ===== FIXED TEXT OVERLAY (outside canvas-area so parent scroll can't interfere) ===== -->
+    <div class="text-overlay-fixed"
+         *ngIf="activeTool === 'text' && textOverlay"
+         [style.left.px]="textOverlay!.screenX"
+         [style.top.px]="textOverlay!.screenY"
+         [style.font]="textOverlayFont"
+         [style.color]="textColor"
+         (mousedown)="onTextOverlayMouseDown($event)">
+      <span class="text-overlay-content">{{ textInput || '...' }}</span>
+      <div class="text-overlay-actions">
+        <button class="text-stamp-btn"
+                (click)="stampText()"
+                (touchend)="$event.preventDefault(); stampText()">✓ Stamp</button>
+        <button class="text-cancel-btn"
+                (click)="cancelText()"
+                (touchend)="$event.preventDefault(); cancelText()">✕ Cancel</button>
+      </div>
+    </div>
   `,
   styles: [`
     :host { display: block; height: calc(100vh - 80px); overflow: hidden; }
@@ -641,11 +678,14 @@ interface HistoryState {
 
     /* ===== Canvas Area ===== */
     .canvas-area {
-      flex: 1; display: flex; align-items: center; justify-content: center; overflow: auto;
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      overflow: auto;
       background: #0c0f1a;
       background-image: repeating-conic-gradient(rgba(255,255,255,0.02) 0% 25%, transparent 0% 50%);
       background-size: 20px 20px;
       position: relative;
+      /* min-content sizing so the flex container actually grows and scrollbars appear */
+      min-height: 0;
     }
 
     .upload-prompt {
@@ -662,11 +702,11 @@ interface HistoryState {
     .format-hint { font-size: 0.75rem; color: var(--text-muted); padding: 4px 12px; background: rgba(148,163,184,0.06); border-radius: 6px; }
 
     .canvas-wrapper {
-      position: relative; display: inline-block;
-      box-shadow: 0 0 40px rgba(0,0,0,0.5); transition: transform 0.15s ease;
-      transform-origin: top center;
+      position: relative; display: inline-block; flex-shrink: 0;
+      box-shadow: 0 0 40px rgba(0,0,0,0.5);
+      /* no transform — we set explicit width/height so layout is always correct */
     }
-    canvas { display: block; cursor: crosshair; }
+    canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
 
     .crop-overlay {
       position: absolute; border: 2px dashed #ec4899;
@@ -681,11 +721,90 @@ interface HistoryState {
     .crop-apply-btn { right: 44px; background: #10b981; color: white; }
     .crop-cancel-btn { right: 0; background: rgba(239,68,68,0.8); color: white; }
 
+    /* Crop dimensions badge shown inside the selection */
+    .crop-dims {
+      position: absolute; top: 4px; left: 4px;
+      background: rgba(0,0,0,0.65); color: #94a3b8;
+      font-size: 0.68rem; font-weight: 600; padding: 2px 6px;
+      border-radius: 4px; pointer-events: none; white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Instruction hint shown before dragging */
+    .crop-hint {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+      background: rgba(0,0,0,0.6); color: #94a3b8;
+      font-size: 0.82rem; font-weight: 500; padding: 10px 18px;
+      border-radius: 10px; pointer-events: none; white-space: nowrap;
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    /* ===== Draggable text overlay ===== */
+    /* ===== Fixed text overlay (position:fixed = immune to parent scroll/overflow) ===== */
+    .text-overlay-fixed {
+      position: fixed;          /* KEY: viewport-fixed, immune to parent overflow */
+      cursor: grab;
+      user-select: none;
+      -webkit-user-select: none;
+      pointer-events: auto;
+      z-index: 9999;            /* Always on top of everything */
+      line-height: 1.1;
+      white-space: nowrap;
+      touch-action: none;       /* Prevents browser scroll on drag */
+    }
+    .text-overlay-fixed:active { cursor: grabbing; }
+
+    .text-overlay-content {
+      display: block;
+      outline: 2px dashed rgba(236,72,153,0.7);
+      outline-offset: 4px;
+      border-radius: 2px;
+      padding: 2px 4px;
+      text-shadow:
+        0 0 4px rgba(0,0,0,0.9),
+        0 0 12px rgba(0,0,0,0.7),
+        1px 1px 0 rgba(0,0,0,0.8),
+       -1px -1px 0 rgba(0,0,0,0.8);
+    }
+
+    .text-overlay-actions {
+      position: absolute;
+      top: calc(100% + 10px);
+      left: 0;
+      display: flex;
+      gap: 6px;
+      pointer-events: auto;
+      z-index: 10000;
+    }
+
+    .text-stamp-btn, .text-cancel-btn {
+      padding: 5px 14px; border: none; border-radius: 7px;
+      font-size: 0.78rem; font-weight: 600; cursor: pointer;
+      font-family: inherit; white-space: nowrap;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.35);
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      min-height: 36px;
+    }
+    .text-stamp-btn  { background: #10b981; color: white; }
+    .text-cancel-btn { background: rgba(239,68,68,0.9); color: white; }
+    .text-stamp-btn:active  { transform: scale(0.95); }
+    .text-cancel-btn:active { transform: scale(0.95); }
+
+    @media (max-width: 768px) {
+      .text-overlay-actions { top: calc(100% + 14px); }
+      .text-stamp-btn, .text-cancel-btn {
+        padding: 12px 22px; font-size: 0.9rem; min-height: 48px;
+        border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      }
+    }
+
     /* On mobile make crop buttons bigger and float above the selection box */
     @media (max-width: 768px) {
       .crop-apply-btn, .crop-cancel-btn {
         bottom: auto;
-        top: -48px;
+        top: -54px;
         padding: 10px 20px;
         font-size: 0.9rem;
         min-height: 44px;
@@ -694,6 +813,7 @@ interface HistoryState {
       }
       .crop-apply-btn { right: 52px; }
       .crop-cancel-btn { right: 0; }
+      .crop-hint { font-size: 0.72rem; padding: 8px 14px; }
     }
 
     /* ===== Responsive ===== */
@@ -1155,9 +1275,23 @@ export class ImageEditorComponent implements AfterViewInit {
   ];
 
   // Crop
-  isCropping = false;
+  hasCropSelection = false;    // a selection rect has been drawn
+  isDraggingCrop   = false;    // currently dragging to draw selection
   cropStart = { x: 0, y: 0 };
-  cropRect = { x: 0, y: 0, w: 0, h: 0 };
+  cropRect  = { x: 0, y: 0, w: 0, h: 0 };
+
+  /** Bound document listeners so we can remove them later */
+  private _docMouseMove?: (e: MouseEvent) => void;
+  private _docMouseUp?:   (e: MouseEvent) => void;
+
+  // Text overlay — uses SCREEN (viewport) coords since the div is position:fixed
+  textOverlay: { screenX: number; screenY: number } | null = null;
+  private _isDraggingText = false;
+  private _textDragStart  = { x: 0, y: 0, ox: 0, oy: 0 };
+  private _textDocMouseMove?: (e: MouseEvent) => void;
+  private _textDocMouseUp?:   ()              => void;
+  private _textDocTouchMove?: (e: TouchEvent) => void;
+  private _textDocTouchEnd?:  ()              => void;
 
   // Adjustments
   brightness = 0;
@@ -1195,9 +1329,32 @@ export class ImageEditorComponent implements AfterViewInit {
   canvasPixelH = 0;
 
   private ctx!: CanvasRenderingContext2D;
+  private _ngZone: NgZone;
+  constructor(ngZone: NgZone) { this._ngZone = ngZone; }
 
   ngAfterViewInit(): void {
     // Canvas will be initialized when image is loaded
+    // Watch for text overlay appearance to attach non-passive touchstart listener
+    this._overlayObserver = new MutationObserver(() => this._attachOverlayNativeTouch());
+    this._overlayObserver.observe(document.body, { childList: true, subtree: true });
+  }
+  private _overlayObserver?: MutationObserver;
+
+  /** Attach a non-passive touchstart listener to the fixed text overlay element
+   * so event.preventDefault() actually works and prevents browser scroll */
+  private _attachedOverlayEl?: Element;
+  private _overlayNativeTouchFn?: EventListener;
+  private _attachOverlayNativeTouch(): void {
+    const el = document.querySelector('.text-overlay-fixed');
+    if (!el || el === this._attachedOverlayEl) return;
+    if (this._overlayNativeTouchFn && this._attachedOverlayEl) {
+      this._attachedOverlayEl.removeEventListener('touchstart', this._overlayNativeTouchFn);
+    }
+    this._overlayNativeTouchFn = (e: Event) => {
+      this._ngZone.run(() => this.onTextOverlayTouchStart(e as TouchEvent));
+    };
+    el.addEventListener('touchstart', this._overlayNativeTouchFn, { passive: false });
+    this._attachedOverlayEl = el;
   }
 
   // ===== File Handling =====
@@ -1259,8 +1416,17 @@ export class ImageEditorComponent implements AfterViewInit {
 
   // ===== Tools =====
   setTool(tool: ToolType): void {
+    // Cancel any active crop drag when switching tool
+    this.hasCropSelection = false;
+    this.isDraggingCrop   = false;
+    this._removeDocListeners();
+    this.cropRect = { x: 0, y: 0, w: 0, h: 0 };
+
+    // Dismiss text overlay when switching tool
+    this.textOverlay = null;
+    this._removeTextDocListeners();
+
     this.activeTool = tool;
-    this.isCropping = false;
     // On mobile, toggling draw/text/eraser auto-opens the adj panel
     if (window.innerWidth <= 768 && (tool === 'draw' || tool === 'eraser' || tool === 'text')) {
       this.showAdjPanel = true;
@@ -1287,30 +1453,59 @@ export class ImageEditorComponent implements AfterViewInit {
 
     if (this.activeTool === 'draw' || this.activeTool === 'eraser') {
       this.isDrawing = true;
-      this.lastX = x;
-      this.lastY = y;
+      this.lastX = x; this.lastY = y;
     } else if (this.activeTool === 'crop') {
-      this.isCropping = true;
+      this.hasCropSelection = false;
+      this.isDraggingCrop   = true;
       this.cropStart = { x, y };
-      this.cropRect = { x, y, w: 0, h: 0 };
+      this.cropRect  = { x, y, w: 0, h: 0 };
+
+      // Attach document-level listeners so drag tracks outside the canvas
+      this._docMouseMove = (e: MouseEvent) => this._doCropDrag(e);
+      this._docMouseUp   = (e: MouseEvent) => this._endCropDrag();
+      document.addEventListener('mousemove', this._docMouseMove);
+      document.addEventListener('mouseup',   this._docMouseUp);
     } else if (this.activeTool === 'text') {
-      this.addText(x, y);
+      // Place overlay at the viewport position of the tap (screen coords for fixed div)
+      this.textOverlay = { screenX: event.clientX, screenY: event.clientY };
     }
+  }
+
+  /** Called by both canvas mousemove and document mousemove during crop drag */
+  private _doCropDrag(event: { clientX: number; clientY: number }): void {
+    if (!this.isDraggingCrop) return;
+    const { x, y } = this.getCanvasCoords(event);
+    const canvas = this.canvasRef.nativeElement;
+    // Clamp to canvas pixel boundaries
+    const cx = Math.max(0, Math.min(canvas.width,  x));
+    const cy = Math.max(0, Math.min(canvas.height, y));
+    this.cropRect = {
+      x: Math.min(this.cropStart.x, cx),
+      y: Math.min(this.cropStart.y, cy),
+      w: Math.abs(cx - this.cropStart.x),
+      h: Math.abs(cy - this.cropStart.y)
+    };
+  }
+
+  private _endCropDrag(): void {
+    if (!this.isDraggingCrop) return;
+    this.isDraggingCrop = false;
+    // Only keep the selection if it has meaningful size
+    this.hasCropSelection = this.cropRect.w > 4 && this.cropRect.h > 4;
+    this._removeDocListeners();
+  }
+
+  private _removeDocListeners(): void {
+    if (this._docMouseMove) { document.removeEventListener('mousemove', this._docMouseMove); this._docMouseMove = undefined; }
+    if (this._docMouseUp)   { document.removeEventListener('mouseup',   this._docMouseUp);   this._docMouseUp   = undefined; }
   }
 
   onCanvasMouseMove(event: MouseEvent): void {
     if (!this.hasImage) return;
-    const { x, y } = this.getCanvasCoords(event);
-
+    // Crop is handled by document listener; drawing handled here
     if (this.isDrawing && (this.activeTool === 'draw' || this.activeTool === 'eraser')) {
+      const { x, y } = this.getCanvasCoords(event);
       this.draw(x, y);
-    } else if (this.isCropping && this.activeTool === 'crop') {
-      this.cropRect = {
-        x: Math.min(this.cropStart.x, x),
-        y: Math.min(this.cropStart.y, y),
-        w: Math.abs(x - this.cropStart.x),
-        h: Math.abs(y - this.cropStart.y)
-      };
     }
   }
 
@@ -1319,24 +1514,26 @@ export class ImageEditorComponent implements AfterViewInit {
       this.isDrawing = false;
       this.saveHistory(this.activeTool === 'eraser' ? 'Erase' : 'Draw');
     }
+    // Crop end handled by document listener
   }
 
   onCanvasTouchStart(event: TouchEvent): void {
     if (!this.hasImage || !event.touches.length) return;
-    event.preventDefault(); // prevent page scroll / pinch-zoom interference
+    event.preventDefault();
     const t = event.touches[0];
     const { x, y } = this.getCanvasCoords(t);
 
     if (this.activeTool === 'draw' || this.activeTool === 'eraser') {
       this.isDrawing = true;
-      this.lastX = x;
-      this.lastY = y;
+      this.lastX = x; this.lastY = y;
     } else if (this.activeTool === 'crop') {
-      this.isCropping = true;
+      this.hasCropSelection = false;
+      this.isDraggingCrop   = true;
       this.cropStart = { x, y };
-      this.cropRect = { x, y, w: 0, h: 0 };
+      this.cropRect  = { x, y, w: 0, h: 0 };
     } else if (this.activeTool === 'text') {
-      this.addText(x, y);
+      // Place overlay at the viewport position of the tap (screen coords for fixed div)
+      this.textOverlay = { screenX: t.clientX, screenY: t.clientY };
     }
   }
 
@@ -1348,13 +1545,8 @@ export class ImageEditorComponent implements AfterViewInit {
 
     if (this.isDrawing && (this.activeTool === 'draw' || this.activeTool === 'eraser')) {
       this.draw(x, y);
-    } else if (this.isCropping && this.activeTool === 'crop') {
-      this.cropRect = {
-        x: Math.min(this.cropStart.x, x),
-        y: Math.min(this.cropStart.y, y),
-        w: Math.abs(x - this.cropStart.x),
-        h: Math.abs(y - this.cropStart.y)
-      };
+    } else if (this.isDraggingCrop && this.activeTool === 'crop') {
+      this._doCropDrag(t);
     }
   }
 
@@ -1364,15 +1556,14 @@ export class ImageEditorComponent implements AfterViewInit {
       this.isDrawing = false;
       this.saveHistory(this.activeTool === 'eraser' ? 'Erase' : 'Draw');
     }
-    // Note: isCropping stays true — user taps Apply/Cancel buttons
+    if (this.isDraggingCrop) {
+      this._endCropDrag();
+    }
   }
 
   getCanvasCoords(event: { clientX: number; clientY: number }): { x: number; y: number } {
     const canvas = this.canvasRef.nativeElement;
     const rect = canvas.getBoundingClientRect();
-    // getBoundingClientRect gives the DISPLAYED size (after CSS zoom transform)
-    // canvas.width/height is the PIXEL size
-    // So we must convert screen coords → canvas pixel coords via the display ratio
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
     return {
@@ -1381,6 +1572,90 @@ export class ImageEditorComponent implements AfterViewInit {
     };
   }
 
+  // ===== Text Overlay Drag =====
+  /** Font string for the fixed overlay — uses real CSS font-size (not zoom-scaled) */
+  get textOverlayFont(): string {
+    const style = [
+      this.textItalic ? 'italic' : '',
+      this.textBold   ? 'bold'   : ''
+    ].filter(Boolean).join(' ');
+    // The fixed overlay is in CSS space; canvas draws at textSize canvas-pixels.
+    // Canvas CSS display width = canvasDisplayW, pixel width = canvas.width.
+    // So 1 canvas pixel = (canvasDisplayW/canvas.width) = zoom CSS pixels.
+    return `${style ? style + ' ' : ''}${Math.round(this.textSize * this.zoom)}px ${this.textFont}`;
+  }
+
+  onTextOverlayMouseDown(event: MouseEvent): void {
+    if ((event.target as HTMLElement).closest('button')) return;
+    event.preventDefault();
+    if (!this.textOverlay) return;
+    this._isDraggingText = true;
+    this._textDragStart  = { x: event.clientX, y: event.clientY, ox: this.textOverlay.screenX, oy: this.textOverlay.screenY };
+
+    this._textDocMouseMove = (e: MouseEvent) => {
+      if (!this._isDraggingText || !this.textOverlay) return;
+      this.textOverlay = {
+        screenX: this._textDragStart.ox + (e.clientX - this._textDragStart.x),
+        screenY: this._textDragStart.oy + (e.clientY - this._textDragStart.y)
+      };
+    };
+    this._textDocMouseUp = () => { this._isDraggingText = false; this._removeTextDocListeners(); };
+    document.addEventListener('mousemove', this._textDocMouseMove);
+    document.addEventListener('mouseup',   this._textDocMouseUp);
+  }
+
+  onTextOverlayTouchStart(event: TouchEvent): void {
+    if ((event.target as HTMLElement).closest('button')) return;
+    // Non-passive listener (attached via MutationObserver), this works
+    event.preventDefault();
+    if (!this.textOverlay || !event.touches.length) return;
+    const t = event.touches[0];
+    this._isDraggingText = true;
+    this._textDragStart  = { x: t.clientX, y: t.clientY, ox: this.textOverlay.screenX, oy: this.textOverlay.screenY };
+
+    this._textDocTouchMove = (e: TouchEvent) => {
+      if (!this._isDraggingText || !this.textOverlay || !e.touches.length) return;
+      e.preventDefault();
+      const touch = e.touches[0];
+      // Must run inside NgZone to trigger Angular change detection
+      this._ngZone.run(() => {
+        this.textOverlay = {
+          screenX: this._textDragStart.ox + (touch.clientX - this._textDragStart.x),
+          screenY: this._textDragStart.oy + (touch.clientY - this._textDragStart.y)
+        };
+      });
+    };
+    this._textDocTouchEnd = () => { this._isDraggingText = false; this._removeTextDocListeners(); };
+    document.addEventListener('touchmove', this._textDocTouchMove, { passive: false } as any);
+    document.addEventListener('touchend',  this._textDocTouchEnd);
+  }
+
+  /** Burn the floating text overlay onto the canvas at its current position */
+  stampText(): void {
+    if (!this.textOverlay) return;
+    // Convert viewport screen position → canvas pixel coords
+    const canvas = this.canvasRef.nativeElement;
+    const rect   = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const canvasX = Math.round((this.textOverlay.screenX - rect.left) * scaleX);
+    const canvasY = Math.round((this.textOverlay.screenY - rect.top)  * scaleY);
+    this.addText(canvasX, canvasY);
+    this.textOverlay = null;
+    this._removeTextDocListeners();
+  }
+
+  cancelText(): void {
+    this.textOverlay = null;
+    this._removeTextDocListeners();
+  }
+
+  private _removeTextDocListeners(): void {
+    if (this._textDocMouseMove) { document.removeEventListener('mousemove', this._textDocMouseMove); this._textDocMouseMove = undefined; }
+    if (this._textDocMouseUp)   { document.removeEventListener('mouseup',   this._textDocMouseUp);   this._textDocMouseUp   = undefined; }
+    if (this._textDocTouchMove) { document.removeEventListener('touchmove', this._textDocTouchMove); this._textDocTouchMove = undefined; }
+    if (this._textDocTouchEnd)  { document.removeEventListener('touchend',  this._textDocTouchEnd);  this._textDocTouchEnd  = undefined; }
+  }
 
   // ===== Drawing =====
   draw(x: number, y: number): void {
@@ -1425,21 +1700,29 @@ export class ImageEditorComponent implements AfterViewInit {
   applyCrop(): void {
     if (this.cropRect.w < 5 || this.cropRect.h < 5) return;
     const canvas = this.canvasRef.nativeElement;
-    const imageData = this.ctx.getImageData(this.cropRect.x, this.cropRect.y, this.cropRect.w, this.cropRect.h);
-
-    canvas.width = this.cropRect.w;
+    const imageData = this.ctx.getImageData(
+      this.cropRect.x, this.cropRect.y,
+      this.cropRect.w, this.cropRect.h
+    );
+    canvas.width  = this.cropRect.w;
     canvas.height = this.cropRect.h;
     this.ctx.putImageData(imageData, 0, 0);
 
-    this.resizeW = canvas.width;
-    this.resizeH = canvas.height;
+    this.resizeW    = canvas.width;
+    this.resizeH    = canvas.height;
     this.aspectRatio = canvas.width / canvas.height;
-    this.isCropping = false;
+    this.hasCropSelection = false;
+    this.isDraggingCrop   = false;
+    this._removeDocListeners();
     this.saveHistory('Crop');
+    this.resetZoom();   // re-fit the now-smaller canvas
   }
 
   cancelCrop(): void {
-    this.isCropping = false;
+    this.hasCropSelection = false;
+    this.isDraggingCrop   = false;
+    this._removeDocListeners();
+    this.cropRect = { x: 0, y: 0, w: 0, h: 0 };
   }
 
   // ===== Transform =====
@@ -1669,39 +1952,53 @@ export class ImageEditorComponent implements AfterViewInit {
   }
 
   // ===== Zoom =====
-  zoomIn(): void { this.zoom = Math.min(5, this.zoom + 0.25); }
-  zoomOut(): void { this.zoom = Math.max(0.1, this.zoom - 0.25); }
-  resetZoom(): void {
-    if (!this.canvasRef) return;
-    const canvas = this.canvasRef.nativeElement;
-    const area = canvas.parentElement?.parentElement;
-    if (!area) { this.zoom = 1; return; }
-
-    const isMobile = window.innerWidth <= 768;
-
-    if (isMobile) {
-      // On mobile: always open at 100% so users see the image at full resolution.
-      // They can pan/pinch or use the +/- buttons to adjust.
-      this.zoom = 1;
-      return;
-    }
-
-    // Desktop: fit to canvas area
-    const padding = 80;
-    const scaleX = (area.clientWidth - padding) / canvas.width;
-    const scaleY = (area.clientHeight - padding) / canvas.height;
-    this.zoom = Math.min(1, Math.min(scaleX, scaleY));
+  get canvasDisplayW(): number {
+    if (!this.canvasRef?.nativeElement) return 0;
+    return Math.round(this.canvasRef.nativeElement.width * this.zoom);
+  }
+  get canvasDisplayH(): number {
+    if (!this.canvasRef?.nativeElement) return 0;
+    return Math.round(this.canvasRef.nativeElement.height * this.zoom);
   }
 
-  /** Fit image to screen width — available from the mobile zoom bar */
+  zoomIn():  void { this.zoom = Math.min(5, parseFloat((this.zoom + 0.25).toFixed(2))); }
+  zoomOut(): void { this.zoom = Math.max(0.1, parseFloat((this.zoom - 0.25).toFixed(2))); }
+
+  resetZoom(): void {
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) { this.zoom = 1; return; }
+
+    // Use setTimeout so Angular has rendered the canvas and the area has its final size
+    setTimeout(() => {
+      if (!this.canvasRef?.nativeElement) return;
+      const canvas = this.canvasRef.nativeElement;
+      // Walk up to find the canvas-area element (parent of canvas-wrapper)
+      const wrapper = canvas.closest('#canvas-wrapper') as HTMLElement | null;
+      const area    = (wrapper?.parentElement ?? canvas.parentElement?.parentElement) as HTMLElement | null;
+      if (!area) { this.zoom = 1; return; }
+
+      const pad  = 64;
+      const maxW = area.clientWidth  - pad;
+      const maxH = area.clientHeight - pad;
+      if (!maxW || !maxH) { this.zoom = 1; return; }
+
+      const scaleX = maxW / canvas.width;
+      const scaleY = maxH / canvas.height;
+      this.zoom = Math.min(1, parseFloat(Math.min(scaleX, scaleY).toFixed(3)));
+    }, 50);
+  }
+
+  /** Fit image to the visible canvas area — used from both desktop and mobile Fit button */
   fitToScreen(): void {
-    if (!this.canvasRef) return;
-    const canvas = this.canvasRef.nativeElement;
-    const area = canvas.parentElement?.parentElement;
+    if (!this.canvasRef?.nativeElement) return;
+    const canvas  = this.canvasRef.nativeElement;
+    const wrapper = canvas.closest('#canvas-wrapper') as HTMLElement | null;
+    const area    = (wrapper?.parentElement ?? canvas.parentElement?.parentElement) as HTMLElement | null;
     if (!area) { this.zoom = 1; return; }
-    const padding = 24;
-    const scaleX = (area.clientWidth - padding) / canvas.width;
-    this.zoom = Math.min(1, scaleX);
+    const pad    = 32;
+    const scaleX = (area.clientWidth  - pad) / canvas.width;
+    const scaleY = (area.clientHeight - pad) / canvas.height;
+    this.zoom = Math.min(1, parseFloat(Math.min(scaleX, scaleY).toFixed(3)));
   }
 
   // ===== History =====
