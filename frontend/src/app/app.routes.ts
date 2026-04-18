@@ -68,6 +68,12 @@ export const routes: Routes = [
     title: 'DocForge — Split Expense Tool'
   },
   {
+    path: 'loan-timeline',
+    loadComponent: () =>
+      import('./pages/loan-timeline/loan-timeline.component').then(m => m.LoanTimelineComponent),
+    title: 'DocForge — Loan Timeline Hacker'
+  },
+  {
     path: 'privacy',
     loadComponent: () =>
       import('./pages/info/privacy/privacy.component').then(m => m.PrivacyComponent),

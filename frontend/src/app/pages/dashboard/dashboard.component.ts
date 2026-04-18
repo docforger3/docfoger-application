@@ -387,6 +387,42 @@ import { ConversionService, ConversionStats, ConversionHistory } from '../../ser
               </svg>
             </div>
           </a>
+
+          <!-- Loan Timeline Hacker Card -->
+          <a routerLink="/loan-timeline" class="tool-card loan-card animate-fade-in-up" id="tool-loan-timeline">
+            <div class="card-glow loan-glow"></div>
+            <div class="card-icon">
+              <svg viewBox="0 0 48 48" fill="none">
+                <defs>
+                  <linearGradient id="loanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#06b6d4"/>
+                    <stop offset="100%" style="stop-color:#10b981"/>
+                  </linearGradient>
+                </defs>
+                <rect x="4" y="4" width="40" height="40" rx="12" fill="url(#loanGrad)" opacity="0.12"/>
+                <!-- Clock base -->
+                <circle cx="24" cy="24" r="14" stroke="url(#loanGrad)" stroke-width="2" fill="none"/>
+                <path d="M24 16v8l5 5" stroke="url(#loanGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <!-- Fast-forward arrows -->
+                <path d="M36 18l4-4-4 4 4 0" stroke="url(#loanGrad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="card-content">
+              <h3 class="card-title">Loan Timeline Hacker</h3>
+              <p class="card-desc">Skip EMI years and save lakhs in interest. Find the exact monthly prepayment to end your loan early.</p>
+              <div class="card-features">
+                <span class="feature-tag teal">Skip EMI Years</span>
+                <span class="feature-tag teal">Interest Saved</span>
+                <span class="feature-tag teal">New Payoff Date</span>
+              </div>
+            </div>
+            <div class="card-arrow loan-arrow">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+              </svg>
+            </div>
+          </a>
+
         </div>
       </div>
     </section>
@@ -937,6 +973,29 @@ import { ConversionService, ConversionStats, ConversionHistory } from '../../ser
     }
     .bill-arrow svg { width: 100%; height: 100%; }
 
+    /* Loan Timeline Hacker Card */
+    .loan-card:hover {
+      border-color: rgba(6, 182, 212, 0.3);
+      box-shadow: 0 0 30px rgba(6, 182, 212, 0.15);
+    }
+    .loan-card:hover .loan-arrow {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    .loan-glow {
+      position: absolute; top: -50%; right: -30%; width: 300px; height: 300px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(6, 182, 212, 0.07), transparent 70%); pointer-events: none;
+    }
+    .loan-arrow {
+      width: 36px; height: 36px; flex-shrink: 0; color: #06b6d4; opacity: 0; transform: translateX(-10px); transition: all 0.3s ease;
+    }
+    .loan-arrow svg { width: 100%; height: 100%; }
+    .feature-tag.teal {
+      background: rgba(6, 182, 212, 0.08);
+      border-color: rgba(6, 182, 212, 0.15);
+      color: #06b6d4;
+    }
+
     /* ===== RESPONSIVE ===== */
     @media (max-width: 768px) {
       .hero { padding: 40px 0 28px; }
@@ -962,6 +1021,7 @@ import { ConversionService, ConversionStats, ConversionHistory } from '../../ser
       .invoice-card,
       .invite-card,
       .bill-card,
+      .loan-card,
       .emi-card { flex-direction: column; align-items: flex-start; gap: 14px; }
 
       /* Always show arrows on mobile (no hover required) */
